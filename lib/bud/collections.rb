@@ -1008,8 +1008,19 @@ module Bud
         end
         @packer.write(marshall_indexes)
         @packer.flush
-        toplevel.dsock.send_datagram(@wire_buf.string,
-                                     the_locspec[0], the_locspec[1])
+        #break apart an overly large buffer into multiples to prevent dropping
+        #on ethernet 1400 bytes is a safe size
+        if @wire_buf.string.bytesize > 1400 
+          str = @wire_buf.string
+          broken_string = str.unpack("a1400"*((str.size/1400)+((str.size%1400>0)?1:0)))
+          broken_string.each do |single_str|
+            toplevel.dsock.send_datagram(single_str,
+                                         the_locspec[0], the_locspec[1])
+          end
+        else
+            toplevel.dsock.send_datagram(@wire_buf.string,
+                                         the_locspec[0], the_locspec[1])
+        end
 
         # Reset output buffer
         @wire_buf.rewind
